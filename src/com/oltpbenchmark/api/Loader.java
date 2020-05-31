@@ -50,18 +50,15 @@ public abstract class Loader<T extends BenchmarkModule> {
      * Note that each LoaderThread has its own databsae Connection handle.
      */
     public abstract class LoaderThread implements Runnable {
-        private final Connection conn;
-        
-        public LoaderThread() throws SQLException {
-            this.conn = Loader.this.benchmark.makeConnection();
-            this.conn.setAutoCommit(false);
-        }
+        public LoaderThread() throws SQLException { }
         
         @Override
         public final void run() {
             try {
-                this.load(this.conn);
-                this.conn.commit();
+                final Connection conn = Loader.this.benchmark.makeConnection();
+                conn.setAutoCommit(false);
+                this.load(conn);
+                conn.commit();
             } catch (SQLException ex) {
                 SQLException next_ex = ex.getNextException();
                 String msg = String.format("Unexpected error when loading %s database",
