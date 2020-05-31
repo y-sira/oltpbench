@@ -196,6 +196,52 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
         this.currStatement = s;
     }
 
+    private long getKeyingTimeInMillis(TransactionType type) {
+        switch (type.getName()) {
+            case "NewOrder":
+                return 18000;
+            case "Payment":
+                return 3000;
+            case "OrderStatus":
+            case "Delivery":
+            case "StockLevel":
+                return 2000;
+            default:
+                LOG.error("returning -1 " + type.getName());
+                return -1;
+        }
+    }
+
+    private long getThinkTimeInMillis(TransactionType type) {
+
+    }
+    private long getThinkTime(TransactionType type) {
+        long mean = -1;;
+        switch (type.getName()) {
+            case "NewOrder":
+            case "Payment":
+                mean = 12000;
+                break;
+            case "OrderStatus":
+                mean = 10000;
+                break;
+            case "Delivery":
+            case "StockLevel":
+                mean = 5000;
+                break;
+            default:
+                LOG.error("returning -1 " + type.getName());
+                return -1;
+        }
+
+        float c = this.benchmarkModule.rng().nextFloat();
+        long thinkTime = (long)(-1 * Math.log(c) * mean);
+        if (thinkTime > 10 * mean) {
+            thinkTime = 10 * mean;
+        }
+        return thinkTime;
+    }
+
     /**
      * Stop executing the current statement.
      */
@@ -289,7 +335,22 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
             // increase latency (queue delay) but we do this anyway since it is
             // useful sometimes
 
-            long start = pieceOfWork.getStartTime();
+            if (this.wrkld.getUseKeyingTime()) {
+                // Wait for the keying time which is a fixed number for every type of transaction.
+                long keying_time_msecs = getKeyingTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+                try {
+                    long sleep_start = System.nanoTime();
+                    Thread.sleep(keying_time_msecs);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                                " Keying time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
+                    }
+                } catch (InterruptedException e) {
+                    LOG.error("Thread sleep interrupted");
+                }
+            }
+
+            long start = System.nanoTime();
 
             TransactionType type = invalidTT;
             try {
@@ -344,6 +405,21 @@ public abstract class Worker<T extends BenchmarkModule> implements Runnable {
                     break;
                 default:
                     // Do nothing
+            }
+
+            if (this.wrkld.getUseThinkTime()) {
+                // Sleep for the think time duration.
+                long think_time_msecs = getThinkTimeInMillis(transactionTypes.getType(pieceOfWork.getType()));
+                try {
+                    long sleep_start = System.nanoTime();
+                    Thread.sleep(think_time_msecs);
+                    if (LOG.isDebugEnabled()) {
+                        LOG.info(transactionTypes.getType(pieceOfWork.getType()).getName() +
+                                " Think time " + (System.nanoTime() - sleep_start) / 1000 / 1000 / 1000);
+                    }
+                } catch (InterruptedException e) {
+                    LOG.error("Thread sleep interrupted");
+                }
             }
 
             wrkldState.finishedWork();

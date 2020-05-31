@@ -54,6 +54,9 @@ public class WorkloadConfiguration {
 	private int loaderThreads = ThreadUtil.availableProcessors();
 	private int numTxnTypes;
     private TraceReader traceReader = null;
+	private boolean useKeyingTime = true;
+	private boolean useThinkTime = true;
+
     public TraceReader getTraceReader() {
         return traceReader;
     }
@@ -290,7 +293,23 @@ public class WorkloadConfiguration {
 		else if(!mode.isEmpty())
 			System.out.println("Indefined isolation mode, set to default [TRANSACTION_SERIALIZABLE]");
 	}
-	
+
+	public boolean getUseKeyingTime() {
+		return useKeyingTime;
+	}
+
+	public void setUseKeyingTime(boolean useKeyingTime) {
+		this.useKeyingTime = useKeyingTime;
+	}
+
+	public boolean getUseThinkTime() {
+		return useThinkTime;
+	}
+
+	public void setUseThinkTime(boolean useThinkTime) {
+		this.useThinkTime = useThinkTime;
+	}
+
 	@Override
 	public String toString() {
         Class<?> confClass = this.getClass();
